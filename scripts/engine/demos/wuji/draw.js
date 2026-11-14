@@ -4,12 +4,12 @@
 const { lerp, clamp } = U;
 const INK = '#3A332C';
 const INK_SOFT = '#6A5E52';
-const PAPER = '#F6F1E6';
-const SKY = '#FBF7F0';
-const FRONT = '#F4E6CC';
-const SIDE = '#E9D7B6';
-const RIDGE = '#F7EDD8';
-const RIDGE_F = '#E6D3B0';
+const PAPER = '#F4EEE4';
+const SKY = '#E4EEEA';
+const FRONT = '#E4C992';
+const SIDE = '#D7C095';
+const RIDGE = '#EBD6A4';
+const RIDGE_F = '#D7BC84';
 const CELADON = '#C5D0C4';
 const FIG = 186;
 
@@ -49,10 +49,11 @@ const SUBS = [
   { t0: 6.25, t1: 8.70, text: '檐角这一小队，才叫走兽。' },
   { t0: 9.06, t1: 10.70, text: '以故宫太和殿为例：' },
   { t0: 10.73, t1: 14.30, text: '最前面是骑凤仙人，不算在十只里面。' },
-  { t0: 14.74, t1: 17.62, text: '后面从龙、凤、狮子排起，' },
-  { t0: 17.70, t1: 21.55, text: '经过狻猊、狎鱼、獬豸，直到行什。' },
-  { t0: 21.94, t1: 23.95, text: '斜脊上的小兽，压住脊瓦，' },
-  { t0: 24.08, t1: 26.15, text: '也寄托着平安的祈愿。' },
+  { t0: 14.74, t1: 17.58, text: '后面从龙、凤、狮子排起，' },
+  { t0: 17.70, t1: 20.42, text: '经过狻猊、狎鱼、獬豸，' },
+  { t0: 20.49, t1: 21.48, text: '直到行什。' },
+  { t0: 21.94, t1: 24.02, text: '斜脊上的小兽，压住脊瓦，' },
+  { t0: 24.08, t1: 25.96, text: '也寄托着平安的祈愿。' },
 ];
 
 const NAMES = [
@@ -113,13 +114,13 @@ function camAt(t) {
   const keys = [
     { t: 0.00, u: 0.10, z: 1.58, oy: -8 },
     { t: 2.40, u: 0.30, z: 1.72, oy: -4 },
-    { t: 5.20, ax: 1070, ay: 730, z: 1.08 },
-    { t: 8.20, ax: 1020, ay: 780, z: 1.26 },
+    { t: 4.45, ax: 1088, ay: 760, z: 0.98 },
+    { t: 8.70, ax: 1088, ay: 760, z: 0.98 },
     { t: 12.15, u: 0.05, z: 1.68, oy: -6 },
     { t: 15.30, u: 0.16, z: 1.56, oy: -8, ease: 'linear' },
     { t: 21.20, u: 0.94, z: 1.56, oy: -8 },
-    { t: 24.30, ax: 980, ay: 700, z: 1.16 },
-    { t: 27.00, ax: 980, ay: 700, z: 1.16 },
+    { t: 23.60, ax: 1088, ay: 780, z: 0.98 },
+    { t: 27.00, ax: 1088, ay: 780, z: 0.98 },
   ];
   let i = 0;
   while (i < keys.length - 2 && t >= keys[i + 1].t) i++;
@@ -134,13 +135,13 @@ function camAt(t) {
 function sky(c) {
   const g = c.createLinearGradient(0, 0, 0, 1080);
   g.addColorStop(0, SKY);
-  g.addColorStop(0.72, PAPER);
-  g.addColorStop(1, '#EFE4D0');
+  g.addColorStop(0.42, '#F3F1EA');
+  g.addColorStop(1, '#E7D7B8');
   c.fillStyle = g;
   c.fillRect(0, 0, 1920, 1080);
   const tile = CL.paperTile('wuji_v4_paper', PAPER, { amt: 8, fibers: 140, grain: 5, seed: 6, fiberCol: [170, 150, 120] });
   c.save();
-  c.globalAlpha = 0.45;
+  c.globalAlpha = 0.28;
   CL.fillPaper(c, tile, 0, 0, 1920, 1080);
   c.restore();
 }
@@ -151,11 +152,11 @@ function roof(c) {
   const spine = hipPts.concat(up);
   const ev = sample(eave, 20);
 
-  poly(c, [sideBack, ridgeL, ...hipPts.slice().reverse(), sideEave]);
+  poly(c, [sideBack, ...spine.slice().reverse(), sideEave]);
   c.fillStyle = SIDE; c.fill();
   ink(c, 1.7); c.stroke();
 
-  poly(c, [{ x: ridgeL.x + 28, y: ridgeL.y + 34 }, { x: ridgeR.x + 22, y: ridgeR.y + 30 }, eaveR, ...ev.slice().reverse()]);
+  poly(c, [...spine, { x: ridgeL.x + 16, y: ridgeL.y + 20 }, { x: ridgeR.x + 14, y: ridgeR.y + 16 }, eaveR, ...ev.slice().reverse()]);
   c.fillStyle = FRONT; c.fill();
   ink(c, 1.8); c.stroke();
 
@@ -182,53 +183,63 @@ function roof(c) {
     c.stroke();
   }
   ink(c, 1.05, INK_SOFT);
-  for (let row = 1; row <= 5; row++) {
-    const v = row / 6;
+  for (let row = 1; row <= 6; row++) {
+    const v = row / 7;
     c.beginPath();
-    for (let k = 0; k <= 8; k++) {
-      const u = k / 8;
+    for (let k = 0; k <= 14; k++) {
+      const u = k / 14;
       const top = lpt(sideBack, ridgeL, u);
       const bot = lpt(sideEave, H0, u);
       const p = lpt(top, bot, v);
-      c.moveTo(p.x - 12, p.y);
-      c.quadraticCurveTo(p.x, p.y + 6, p.x + 12, p.y);
+      k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
     }
     c.stroke();
   }
 
   const ang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
-  const nx = Math.sin(ang), ny = -Math.cos(ang);
-  const fL = { x: ridgeL.x + nx * 26, y: ridgeL.y + ny * 26 };
-  const fR = { x: ridgeR.x + nx * 26, y: ridgeR.y + ny * 26 };
-  poly(c, [ridgeL, ridgeR, fR, fL]);
-  c.fillStyle = RIDGE; c.fill();
-  ink(c, 1.8); c.stroke();
-  poly(c, [fL, fR, { x: fR.x + nx * 16, y: fR.y + ny * 16 }, { x: fL.x + nx * 16, y: fL.y + ny * 16 }]);
-  c.fillStyle = RIDGE_F; c.fill();
-  ink(c, 1.4); c.stroke();
-
-  function barrel(pts, gap, rad) {
-    walk(pts, gap, (p, a) => {
-      c.save();
-      c.translate(p.x, p.y);
-      c.rotate(a);
+  function solidRidge(pts, half) {
+    if (pts.length < 2) return;
+    const L = [], R = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const q = pts[Math.min(pts.length - 1, i + 1)];
+      const r = pts[Math.max(0, i - 1)];
+      let dx = i === 0 ? q.x - p.x : i === pts.length - 1 ? p.x - r.x : q.x - r.x;
+      let dy = i === 0 ? q.y - p.y : i === pts.length - 1 ? p.y - r.y : q.y - r.y;
+      const m = Math.hypot(dx, dy) || 1;
+      dx /= m; dy /= m;
+      L.push({ x: p.x - dy * half, y: p.y + dx * half });
+      R.push({ x: p.x + dy * half, y: p.y - dx * half });
+    }
+    c.beginPath();
+    L.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+    for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i].x, R[i].y);
+    c.closePath();
+    c.fillStyle = RIDGE;
+    c.fill();
+    ink(c, 1.8); c.stroke();
+    ink(c, 1.15, INK);
+    walk(pts, 34, (p, a) => {
+      const ox = -Math.sin(a) * half, oy = Math.cos(a) * half;
       c.beginPath();
-      c.ellipse(0, 0, rad * 1.15, rad * 0.72, 0, 0, 7);
-      c.fillStyle = RIDGE;
-      c.fill();
-      ink(c, 1.15); c.stroke();
-      c.restore();
+      c.moveTo(p.x - ox, p.y - oy);
+      c.lineTo(p.x + ox, p.y + oy);
+      c.stroke();
     });
   }
-  barrel(spine, 28, 11);
-  barrel([ridgeL, ridgeR], 26, 12);
-
-  const far = sample(u => quad(eaveR, { x: 1980, y: 680 }, { x: ridgeR.x + 8, y: ridgeR.y + 24 }, u), 12);
-  c.beginPath();
-  far.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
-  ink(c, 8, RIDGE_F); c.stroke();
-  ink(c, 1.4); c.stroke();
-  barrel(far, 30, 9);
+  solidRidge(spine, 24);
+  const nx = Math.sin(ang), ny = -Math.cos(ang);
+  const beam = [ridgeL, ridgeR, { x: ridgeR.x + nx * 22, y: ridgeR.y + ny * 22 }, { x: ridgeL.x + nx * 22, y: ridgeL.y + ny * 22 }];
+  poly(c, beam);
+  c.fillStyle = RIDGE_F; c.fill();
+  ink(c, 1.7); c.stroke();
+  ink(c, 1.15, INK);
+  walk([ridgeL, ridgeR], 32, (p) => {
+    c.beginPath();
+    c.moveTo(p.x, p.y);
+    c.lineTo(p.x + nx * 22, p.y + ny * 22);
+    c.stroke();
+  });
 
   ink(c, 5, CELADON);
   c.beginPath();
@@ -243,11 +254,34 @@ function roof(c) {
   }
 }
 
-function zhengwen(c, x, y, dir, ang) {
+function ornamentAlpha(cam, bite, dir, ang) {
   const im = window.IMG[ZW];
-  if (!im) return;
+  if (!im) return 0;
+  const s = ZW_H / im.height;
+  const corners = [[80, 62], [780, 62], [80, 1056], [780, 1056]];
+  let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+  for (const [ix, iy] of corners) {
+    const lx = (ix - ZBITE.x) * s * dir;
+    const ly = (iy - ZBITE.y) * s;
+    const wx = bite.x + lx * Math.cos(ang) - ly * Math.sin(ang);
+    const wy = bite.y + lx * Math.sin(ang) + ly * Math.cos(ang);
+    const [sx, sy] = CAM.toScreen(cam, wx, wy);
+    minx = Math.min(minx, sx); maxx = Math.max(maxx, sx);
+    miny = Math.min(miny, sy); maxy = Math.max(maxy, sy);
+  }
+  if (maxx < 0 || minx > 1920 || maxy < 0 || miny > 1080) return 0;
+  if (minx < 0 || maxx > 1920 || miny < 0 || maxy > 1080) return 0;
+  const inset = Math.min(minx - 77, 1843 - maxx, miny - 43, 1037 - maxy);
+  if (inset >= 0) return 1;
+  return clamp(1 + inset / 77, 0, 1);
+}
+
+function zhengwen(c, x, y, dir, ang, alpha) {
+  const im = window.IMG[ZW];
+  if (!im || alpha < 0.02) return;
   const s = ZW_H / im.height;
   c.save();
+  c.globalAlpha *= alpha;
   c.translate(x, y);
   c.rotate(ang);
   c.scale(dir, 1);
@@ -320,26 +354,33 @@ function labels(c, cam, t, act) {
 }
 
 function card(c, t) {
-  const a = fade(t, 22.15, 22.7, 26.4, 27.0);
+  const a = fade(t, 22.05, 22.55, 26.45, 27.0);
   if (a < 0.02) return;
-  const x = 64, y = 150, w = 460, h = 168;
+  const x = 56, y = 48, w = 760, h = 340;
   c.save();
   c.globalAlpha = a;
-  c.fillStyle = 'rgba(251,247,240,0.92)';
+  c.fillStyle = 'rgba(247,244,238,0.94)';
   c.fillRect(x, y, w, h);
-  ink(c, 1.3); c.strokeRect(x, y, w, h);
-  ink(c, 1.6);
-  c.beginPath(); c.moveTo(x + 36, y + 108); c.lineTo(x + 210, y + 36); c.stroke();
-  c.fillStyle = RIDGE_F;
-  for (let i = 0; i < 4; i++) {
-    const px = x + 62 + i * 34, py = y + 96 - i * 16;
+  ink(c, 1.6); c.strokeRect(x, y, w, h);
+  const x0 = x + 48, y0 = y + 196;
+  ink(c, 2.2);
+  c.beginPath();
+  c.moveTo(x0, y0); c.lineTo(x0 + 280, y0 - 92); c.stroke();
+  c.fillStyle = RIDGE;
+  for (let i = 0; i < 5; i++) {
+    const px = x0 + 36 + i * 48, py = y0 - 12 - i * 16;
     c.beginPath();
-    c.moveTo(px - 12, py); c.quadraticCurveTo(px, py + 8, px + 12, py);
-    c.lineTo(px + 8, py - 6); c.lineTo(px - 8, py - 6); c.closePath();
-    c.fill(); ink(c, 1); c.stroke();
+    c.moveTo(px - 22, py); c.lineTo(px + 22, py - 8); c.lineTo(px + 16, py - 22); c.lineTo(px - 28, py - 14); c.closePath();
+    c.fill(); ink(c, 1.3); c.stroke();
   }
+  c.strokeStyle = '#241E18'; c.lineWidth = 5; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x0 + 168, y0 - 8); c.lineTo(x0 + 152, y0 - 86); c.stroke();
+  c.lineWidth = 7;
+  c.beginPath(); c.moveTo(x0 + 136, y0 - 86); c.lineTo(x0 + 172, y0 - 96); c.stroke();
   c.restore();
-  TY.text(c, '压住脊瓦 · 旧法示意', x + 28, y + 142, { size: 30, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: a });
+  TY.text(c, '压住脊瓦', x + 360, y + 118, { size: 52, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: a });
+  TY.text(c, '钉在瓦下', x + 360, y + 186, { size: 48, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: a });
+  TY.text(c, '旧法示意，不是现状', x + 360, y + 250, { size: 40, fam: 'LXGWWenKai-500', color: '#5C5348', align: 'left', base: 'alphabetic', alpha: a });
 }
 
 function subtitle(c, t) {
@@ -362,8 +403,9 @@ let ready = false;
 const WUJI = window.WUJI = {
   init() {
     if (ready) return; ready = true;
-    const all = SUBS.map(s => s.text).join('') + NAMES.map(n => n.name).join('') + '正吻走兽压住脊瓦旧法示意';
+    const all = SUBS.map(s => s.text).join('') + NAMES.map(n => n.name).join('') + '正吻走兽压住脊瓦钉在瓦下旧法示意不是现状';
     U.assertGlyphs('76px "PuHui-Bold"', all, '样镜');
+    U.assertGlyphs('40px "LXGWWenKai-500"', '旧法示意，不是现状', '样镜卡片');
   },
   draw(c, t) {
     sky(c);
@@ -373,8 +415,8 @@ const WUJI = window.WUJI = {
     CAM.apply(c, cam);
     roof(c);
     const act = beasts(c, t);
-    zhengwen(c, ridgeL.x, ridgeL.y, 1, ang);
-    zhengwen(c, ridgeR.x, ridgeR.y, -1, ang);
+    zhengwen(c, ridgeL.x, ridgeL.y, 1, ang, ornamentAlpha(cam, ridgeL, 1, ang));
+    zhengwen(c, ridgeR.x, ridgeR.y, -1, ang, ornamentAlpha(cam, ridgeR, -1, ang));
     c.restore();
     labels(c, cam, t, act);
     card(c, t);
