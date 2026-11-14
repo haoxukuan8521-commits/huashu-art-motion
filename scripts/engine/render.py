@@ -10,7 +10,7 @@ uv run --with playwright python render.py --spec clip.json --out 片段.mp4 [--a
     宽高/fps 从 spec 读；默认无声 H.264 yuv420p、每秒一个关键帧（GOP=fps，管线渲染器按秒 seek），--alpha 出 ProRes 4444 带透明（.mov）。spec 里图片路径相对 spec 文件。
 页面里有 pageerror 或 console.error（场景报错、缺字形）→ 渲完后非零退出。
 """
-import argparse, base64, http.server, json, socketserver, subprocess, sys, threading, functools, time, urllib.parse
+import argparse, base64, http.server, json, os, socketserver, subprocess, sys, threading, functools, time, urllib.parse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import spec_assets
@@ -90,11 +90,16 @@ port = srv.server_address[1]
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 with sync_playwright() as p:
-    b = p.chromium.launch(args=['--disable-web-security', '--enable-gpu-rasterization', '--ignore-gpu-blocklist'])
+    launch = dict(args=['--disable-web-security', '--enable-gpu-rasterization', '--ignore-gpu-blocklist'])
+    if os.environ.get('CHROME_PATH'): launch['executable_path'] = os.environ['CHROME_PATH']
+    b = p.chromium.launch(**launch)
     pg = b.new_page(viewport={'width': 1920, 'height': 1080}, device_scale_factor=1)
     errors = []
     def on_console(m):
-        if m.type in ('error', 'warning'): print('[page]', m.text)
+        loc = getattr(m, 'location', None) or {}
+        url = loc.get('url', '') if isinstance(loc, dict) else ''
+        if 'favicon.ico' in m.text or 'favicon.ico' in url: return
+        if m.type in ('error', 'warning'): print('[page]', m.text, loc or '')
         if m.type == 'error': errors.append(m.text)
     pg.on('console', on_console)
     pg.on('pageerror', lambda e: (print('[pageerror]', e), errors.append(str(e))))
