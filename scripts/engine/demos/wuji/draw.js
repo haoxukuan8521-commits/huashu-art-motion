@@ -148,8 +148,10 @@ function sky(c) {
 
 const COLS = 12;
 
-function solidRidge(c, pts, half) {
+function solidRidge(c, pts, half, halfUp) {
   if (pts.length < 2) return;
+  const downAt = (i) => typeof half === 'number' ? half : half[0] + (half[1] - half[0]) * (i / (pts.length - 1));
+  const upAt = (i) => halfUp == null ? downAt(i) : halfUp;
   const L = [], R = [];
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i];
@@ -159,8 +161,9 @@ function solidRidge(c, pts, half) {
     let dy = i === 0 ? q.y - p.y : i === pts.length - 1 ? p.y - r.y : q.y - r.y;
     const m = Math.hypot(dx, dy) || 1;
     dx /= m; dy /= m;
-    L.push({ x: p.x - dy * half, y: p.y + dx * half });
-    R.push({ x: p.x + dy * half, y: p.y - dx * half });
+    const hd = downAt(i), hu = upAt(i);
+    L.push({ x: p.x - dy * hd, y: p.y + dx * hd });
+    R.push({ x: p.x + dy * hu, y: p.y - dx * hu });
   }
   c.beginPath();
   L.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
@@ -170,13 +173,23 @@ function solidRidge(c, pts, half) {
   c.fill();
   ink(c, 1.8); c.stroke();
   ink(c, 1.1, INK);
-  walk(pts, 36, (p, a) => {
-    const ox = -Math.sin(a) * half, oy = Math.cos(a) * half;
-    c.beginPath();
-    c.moveTo(p.x - ox * 0.92, p.y - oy * 0.92);
-    c.lineTo(p.x + ox * 0.92, p.y + oy * 0.92);
-    c.stroke();
-  });
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i - 1], q = pts[i];
+    const seg = Math.hypot(q.x - p.x, q.y - p.y);
+    const n = Math.max(1, Math.round(seg / 36));
+    for (let k = 1; k < n; k++) {
+      const t = k / n;
+      const x = p.x + (q.x - p.x) * t, y = p.y + (q.y - p.y) * t;
+      const a = Math.atan2(q.y - p.y, q.x - p.x);
+      const hd = downAt(i - 1) + (downAt(i) - downAt(i - 1)) * t;
+      const hu = upAt(i - 1) + (upAt(i) - upAt(i - 1)) * t;
+      const ox = -Math.sin(a), oy = Math.cos(a);
+      c.beginPath();
+      c.moveTo(x + ox * hd * 0.92, y + oy * hd * 0.92);
+      c.lineTo(x - ox * hu * 0.92, y - oy * hu * 0.92);
+      c.stroke();
+    }
+  }
 }
 
 function roundCap(c, p, ang, half) {
@@ -193,6 +206,27 @@ function roundCap(c, p, ang, half) {
   c.arc(-half * 0.08, 0, half * 0.62, Math.PI / 2, Math.PI * 1.5, false);
   ink(c, 1.15); c.stroke();
   c.restore();
+}
+
+function ridgeSleeve(c, a, b, hd, hu) {
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  const ox = -Math.sin(ang), oy = Math.cos(ang);
+  const p = [
+    { x: a.x + ox * hd, y: a.y + oy * hd },
+    { x: b.x + ox * hd, y: b.y + oy * hd },
+    { x: b.x - ox * hu, y: b.y - oy * hu },
+    { x: a.x - ox * hu, y: a.y - oy * hu },
+  ];
+  c.beginPath();
+  p.forEach((q, i) => i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y));
+  c.closePath();
+  c.fillStyle = RIDGE;
+  c.fill();
+  ink(c, 1.8);
+  c.beginPath();
+  c.moveTo(p[0].x, p[0].y); c.lineTo(p[1].x, p[1].y);
+  c.moveTo(p[3].x, p[3].y); c.lineTo(p[2].x, p[2].y);
+  c.stroke();
 }
 
 function roof(c, t) {
@@ -267,17 +301,32 @@ function roof(c, t) {
   c.restore();
   poly(c, frontPts); ink(c, 1.8); c.stroke();
 
-  solidRidge(c, spine, 22);
+  // 垂脊收到正脊同宽，角上不再出现一宽一窄的错台。
+  const hipBack = spine[spine.length - 2];
+  const hipSpan = Math.hypot(ridgeL.x - hipBack.x, ridgeL.y - hipBack.y) || 1;
+  const hipEnd = {
+    x: ridgeL.x + (hipBack.x - ridgeL.x) / hipSpan * 18,
+    y: ridgeL.y + (hipBack.y - ridgeL.y) / hipSpan * 18,
+  };
+  solidRidge(c, spine.slice(0, -1).concat([hipEnd]), [22, 14]);
   const tipAng = Math.atan2(spine[1].y - spine[0].y, spine[1].x - spine[0].x);
   roundCap(c, spine[0], tipAng, 22);
   const rang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
   const ux = Math.cos(rang), uy = Math.sin(rang);
   const show = t < 8.35 ? 1 : t < 9.15 ? 1 - ease(t, 8.35, 9.15) : t < 22.4 ? 0 : ease(t, 22.4, 23.1);
-  const ext = 18 * show;
-  const ridgePts = ext > 1
-    ? [{ x: ridgeL.x - ux * ext, y: ridgeL.y - uy * ext }, ridgeL, ridgeR, { x: ridgeR.x + ux * ext, y: ridgeR.y + uy * ext }]
-    : [ridgeL, ridgeR];
-  solidRidge(c, ridgePts, 12);
+  const intoMouth = 22;
+  const mouthL = { x: ridgeL.x - ux * intoMouth, y: ridgeL.y - uy * intoMouth };
+  const mouthR = { x: ridgeR.x + ux * intoMouth, y: ridgeR.y + uy * intoMouth };
+  solidRidge(c, [ridgeL, ridgeR], 14);
+  roundCap(c, ridgeL, rang, 18);
+  roundCap(c, ridgeR, rang + Math.PI, 18);
+  if (show > 0.02) {
+    c.save();
+    c.globalAlpha *= show;
+    solidRidge(c, [mouthL, ridgeL], 14);
+    solidRidge(c, [ridgeR, mouthR], 14);
+    c.restore();
+  }
 
   ink(c, 2.2, INK);
   c.beginPath();
@@ -308,20 +357,26 @@ function mountBase(c, bite, ang, inward, alpha) {
   const ux = Math.cos(ang) * inward;
   const uy = Math.sin(ang) * inward;
   const d = downOf(ang);
+  const ridgeHalf = 14;
   c.save();
   c.globalAlpha *= alpha;
   for (let i = 0; i < 3; i++) {
-    const along = 22 + i * 22;
-    const x = bite.x + ux * along + d.x * 10;
-    const y = bite.y + uy * along + d.y * 10;
+    const along = 4 + i * 24;
+    const x = bite.x + ux * along + d.x * (ridgeHalf + 5);
+    const y = bite.y + uy * along + d.y * (ridgeHalf + 5);
     c.save();
     c.translate(x, y);
     c.rotate(ang);
     c.beginPath();
-    c.ellipse(0, 0, 16, 8, 0, 0, Math.PI * 2);
+    c.moveTo(-13, -6);
+    c.lineTo(13, -6);
+    c.quadraticCurveTo(16, 0, 13, 6);
+    c.lineTo(-13, 6);
+    c.quadraticCurveTo(-16, 0, -13, -6);
+    c.closePath();
     c.fillStyle = RIDGE;
     c.fill();
-    ink(c, 1.3); c.stroke();
+    ink(c, 1.25); c.stroke();
     c.restore();
   }
   c.restore();
@@ -557,8 +612,23 @@ const WUJI = window.WUJI = {
     const aR = ornamentAlpha(cam, ridgeR, -1, ang) * showOrnament;
     mountBase(c, ridgeL, ang, 1, aL);
     mountBase(c, ridgeR, ang, -1, aR);
-    zhengwen(c, ridgeL.x, ridgeL.y, 1, ang, aL);
-    zhengwen(c, ridgeR.x, ridgeR.y, -1, ang, aR);
+    const drop = downOf(ang);
+    const seatL = { x: ridgeL.x + drop.x * -4, y: ridgeL.y + drop.y * -4 };
+    const seatR = { x: ridgeR.x + drop.x * 4, y: ridgeR.y + drop.y * 4 };
+    zhengwen(c, seatL.x, seatL.y, 1, ang, aL);
+    zhengwen(c, seatR.x, seatR.y, -1, ang, aR);
+    const ux = Math.cos(ang), uy = Math.sin(ang);
+    const sleeve = (bite, inward, alpha) => {
+      if (alpha < 0.02) return;
+      const a = { x: bite.x - ux * inward * 2, y: bite.y - uy * inward * 2 };
+      const b = { x: bite.x + ux * inward * 32, y: bite.y + uy * inward * 32 };
+      c.save();
+      c.globalAlpha *= alpha;
+      ridgeSleeve(c, a, b, 12, 12);
+      c.restore();
+    };
+    sleeve(ridgeL, 1, aL);
+    sleeve(ridgeR, -1, aR);
     c.restore();
     c.save();
     CAM.apply(c, near);
