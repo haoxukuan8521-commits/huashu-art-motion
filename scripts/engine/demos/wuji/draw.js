@@ -506,11 +506,13 @@ function tag(c, cam, world, text, alpha, lift) {
 }
 
 function labels(c, cam, t, act) {
+  const zwPanel = fade(t, 2.90, 3.30, 5.40, 5.80);
+  const zsPanel = fade(t, 6.15, 6.55, 8.20, 8.60);
   const zwA = fade(t, 4.55, 4.85, 6.15, 6.45);
-  if (zwA > 0.03) tag(c, cam, { x: ridgeL.x - 160, y: ridgeL.y - 80 }, '正吻', zwA, 80);
+  if (zwA > 0.03 && zwPanel < 0.05) tag(c, cam, { x: ridgeL.x - 160, y: ridgeL.y - 80 }, '正吻', zwA, 80);
   const zsA = fade(t, 6.90, 7.15, 8.70, 9.05);
   const mid = beastPos(3);
-  if (zsA > 0.03) tag(c, cam, { x: mid.x - 70, y: mid.y - FIG - 70 }, '走兽', zsA, 10);
+  if (zsA > 0.03 && zsPanel < 0.05) tag(c, cam, { x: mid.x - 70, y: mid.y - FIG - 70 }, '走兽', zsA, 10);
   if (act) tag(c, cam, beastPos(act.i), act.name, act.a, FIG + 10);
 }
 
@@ -580,7 +582,7 @@ function card(c, t) {
 function hookQuestion(c, t) {
   const a = fade(t, 0.22, 0.62, 2.05, 2.48);
   if (a < 0.02) return;
-  const text = '屋顶上，谁在排队？';
+  const text = '谁在排队？';
   const size = 76;
   const w = TY.width(c, text, size, 'PuHui-Bold') + 48;
   const x = 960, y = 132;
@@ -591,6 +593,111 @@ function hookQuestion(c, t) {
   ink(c, 1.3); c.strokeRect(x - w / 2, y - 52, w, 84);
   c.restore();
   TY.text(c, text, x, y + 6, { size, fam: 'PuHui-Bold', color: '#241E18', align: 'center', base: 'middle', alpha: a });
+}
+
+function openingFade(c, t) {
+  const a = 1 - ease(t, 1.15, 1.70);
+  if (a < 0.02) return;
+  const g = c.createLinearGradient(1580, 0, 1920, 0);
+  g.addColorStop(0, 'rgba(232,236,232,0)');
+  g.addColorStop(0.45, 'rgba(236,234,226,0.88)');
+  g.addColorStop(1, 'rgba(236,234,226,1)');
+  c.save();
+  c.globalAlpha = a;
+  c.fillStyle = g;
+  c.fillRect(1580, 0, 340, 1080);
+  c.restore();
+}
+
+function paintOrnaments(c, cam, t, ang) {
+  const showOrnament = ornamentShow(t);
+  const aL = showOrnament;
+  const aR = showOrnament;
+  mountBase(c, ridgeL, ang, 1, aL);
+  mountBase(c, ridgeR, ang, -1, aR);
+  const drop = downOf(ang);
+  const seatL = { x: ridgeL.x + drop.x * -4, y: ridgeL.y + drop.y * -4 };
+  const seatR = { x: ridgeR.x + drop.x * 4, y: ridgeR.y + drop.y * 4 };
+  zhengwen(c, seatL.x, seatL.y, 1, ang, aL);
+  zhengwen(c, seatR.x, seatR.y, -1, ang, aR);
+  const ux = Math.cos(ang), uy = Math.sin(ang);
+  const sleeve = (bite, inward, alpha) => {
+    if (alpha < 0.02) return;
+    const a = { x: bite.x - ux * inward * 2, y: bite.y - uy * inward * 2 };
+    const b = { x: bite.x + ux * inward * 32, y: bite.y + uy * inward * 32 };
+    c.save();
+    c.globalAlpha *= alpha;
+    ridgeSleeve(c, a, b, 12, 12);
+    c.restore();
+  };
+  sleeve(ridgeL, 1, aL);
+  sleeve(ridgeR, -1, aR);
+  return seatL;
+}
+
+function callouts(c, t, mainCam) {
+  const zw = fade(t, 2.90, 3.30, 5.40, 5.80);
+  const zs = fade(t, 6.15, 6.55, 8.20, 8.60);
+  const ang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
+  const drawInset = (alpha, box, focus, z, label, mode) => {
+    if (alpha < 0.02) return;
+    const { x, y, w, h } = box;
+    const band = 84;
+    const sx = x + w / 2;
+    const sy = y + (h - band) / 2;
+    c.save();
+    c.globalAlpha = alpha;
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.fillStyle = '#F3EEE4';
+    c.fillRect(x, y, w, h);
+    const zoom = CAM.anchor(focus.x, focus.y, z, sx, sy);
+    c.save();
+    CAM.apply(c, zoom);
+    roof.cam = zoom;
+    roof(c, t);
+    if (mode === 'zw') paintOrnaments(c, zoom, t, ang);
+    c.restore();
+    if (mode === 'beast') {
+      c.save();
+      CAM.apply(c, zoom);
+      for (const i of [0, 1, 2]) {
+        const p = beastPos(i);
+        drawBeast(c, BEASTS[i], p.x, p.y);
+      }
+      c.restore();
+    }
+    c.restore();
+    c.save();
+    c.globalAlpha = alpha;
+    ink(c, 1.4);
+    c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    c.fillStyle = 'rgba(251,247,240,0.94)';
+    c.fillRect(x, y + h - band, w, band);
+    ink(c, 1.2);
+    c.beginPath();
+    c.moveTo(x, y + h - band);
+    c.lineTo(x + w, y + h - band);
+    c.stroke();
+    c.restore();
+    TY.text(c, label, sx, y + h - band / 2 + 2, { size: 70, fam: 'PuHui-Bold', color: '#241E18', align: 'center', base: 'middle', alpha });
+    const [tx, ty] = CAM.toScreen(mainCam, focus.x, focus.y);
+    c.save();
+    c.globalAlpha = alpha * 0.45;
+    c.strokeStyle = INK;
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(x + w, y + (h - band) / 2);
+    c.lineTo(tx, ty);
+    c.stroke();
+    c.restore();
+  };
+  const drop = downOf(ang);
+  const mouth = { x: ridgeL.x + drop.x * -4 + Math.cos(ang) * 18, y: ridgeL.y + drop.y * -4 + Math.sin(ang) * 18 };
+  drawInset(zw, { x: 36, y: 40, w: 460, h: 470 }, mouth, 2.35, '正吻', 'zw');
+  const herd = beastPos(1);
+  drawInset(zs, { x: 36, y: 40, w: 460, h: 470 }, { x: herd.x, y: herd.y - 70 }, 1.95, '走兽', 'beast');
 }
 
 function subtitle(c, t) {
@@ -656,7 +763,7 @@ const WUJI = window.WUJI = {
     const drop = downOf(ang);
     const seatL = { x: ridgeL.x + drop.x * -4, y: ridgeL.y + drop.y * -4 };
     const seatR = { x: ridgeR.x + drop.x * 4, y: ridgeR.y + drop.y * 4 };
-    zhengwen(c, seatL.x, seatL.y, 1, ang, aL);
+    zhengwen(c, seatL.x, seatL.y, 1, ang, aL * 1);
     zhengwen(c, seatR.x, seatR.y, -1, ang, aR);
     const ux = Math.cos(ang), uy = Math.sin(ang);
     const sleeve = (bite, inward, alpha) => {
@@ -678,6 +785,8 @@ const WUJI = window.WUJI = {
     labels(c, near, t, act);
     card(c, t);
     hookQuestion(c, t);
+    openingFade(c, t);
+    callouts(c, t, cam);
     subtitle(c, t);
   },
 };
