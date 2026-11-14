@@ -7,6 +7,6 @@ window.FILM_SIZE = [1920, 1080];
 window.SCENE_DIR = 'demos/wuji';
 window.SCENE_LIBS = ['demos/wuji/draw.js'];
 window.ERAS = [
-  { id: 'wuji_a', dur: 14.9 },
-  { id: 'wuji_b', dur: 14.5 },
+  { id: 'wuji_a', dur: 14.55 },
+  { id: 'wuji_b', dur: 16.45 },
 ];
