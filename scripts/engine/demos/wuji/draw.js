@@ -111,11 +111,20 @@ function walk(pts, step, fn) {
   }
 }
 
+function ornamentShow(t) {
+  if (t < 2.40) return 0;
+  if (t < 2.98) return ease(t, 2.40, 2.98);
+  if (t < 8.35) return 1;
+  if (t < 9.15) return 1 - ease(t, 8.35, 9.15);
+  if (t < 22.4) return 0;
+  return ease(t, 22.4, 23.1);
+}
+
 function camAt(t) {
   const keys = [
-    { t: 0.00, ax: 860, ay: 820, z: 1.38 },
-    { t: 2.60, ax: 980, ay: 760, z: 1.48 },
-    { t: 4.70, ax: 980, ay: 728, z: 1.16 },
+    { t: 0.00, ax: 368, ay: 858, z: 2.66 },
+    { t: 1.30, ax: 368, ay: 858, z: 2.66 },
+    { t: 2.72, ax: 980, ay: 728, z: 1.16 },
     { t: 8.15, ax: 980, ay: 728, z: 1.16 },
     { t: 11.90, u: 0.10, z: 1.58, ox: -40, oy: 50 },
     { t: 14.20, u: 0.14, z: 1.52, ox: 0, oy: 16 },
@@ -246,16 +255,22 @@ function roof(c, t) {
   sideWash.addColorStop(1, '#D2BC90');
   c.fillStyle = sideWash;
   c.fillRect(-400, -400, 4000, 4000);
-  ink(c, 1.05, INK_SOFT);
-  for (let row = 1; row <= 5; row++) {
-    const v = row / 7;
-    c.beginPath();
-    for (let k = 0; k <= 14; k++) {
-      const u = k / 14;
-      const p = lpt(lpt(sideBack, ridgeL, u), lpt(sideEave, H0, u), v);
-      k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
+  ink(c, 0.9, INK_SOFT);
+  for (let i = 0; i < 6; i++) {
+    const u = (i + 0.5) / 6;
+    const top = lpt(sideBack, ridgeL, u);
+    const end = lpt(sideEave, H0, u);
+    const shift = (i % 2) * 0.06;
+    for (let row = 0; row < 4; row++) {
+      const v0 = 0.16 + shift + row * 0.16;
+      if (v0 > 0.82) break;
+      const a = lpt(top, end, v0);
+      const b = lpt(top, end, Math.min(0.86, v0 + 0.09));
+      c.beginPath();
+      c.moveTo(a.x, a.y);
+      c.quadraticCurveTo((a.x + b.x) / 2 + 4, (a.y + b.y) / 2 - 3, b.x, b.y);
+      c.stroke();
     }
-    c.stroke();
   }
   c.restore();
   poly(c, sidePts); ink(c, 1.7); c.stroke();
@@ -275,29 +290,32 @@ function roof(c, t) {
   glow.addColorStop(1, 'rgba(255,251,236,0)');
   c.fillStyle = glow;
   c.beginPath(); c.arc(light.x, light.y, 250, 0, Math.PI * 2); c.fill();
-  ink(c, 1.05, INK_SOFT);
-  for (let i = 0; i < COLS; i++) {
-    const u = (i + 0.5) / COLS;
+  c.save();
+  c.lineCap = 'round';
+  const cols = 7;
+  for (let i = 0; i < cols; i++) {
+    const u = (i + 0.5) / cols;
     const top = lpt(ridgeL, ridgeR, u);
     const end = eave(u);
-    const dx = end.x - top.x, dy = end.y - top.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const a = lpt(top, end, 0.16);
-    const b = { x: end.x - dx / len * 8, y: end.y - dy / len * 8 };
-    if (Math.hypot(b.x - a.x, b.y - a.y) < 36) continue;
-    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
-  }
-  for (let row = 1; row <= 4; row++) {
-    const v = 0.18 + row * 0.14;
-    c.beginPath();
-    for (let k = 0; k <= 28; k++) {
-      const u = k / 28;
-      const top = lpt(ridgeL, ridgeR, u);
-      const p = lpt(top, eave(u), v);
-      k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
+    const shift = (i % 2) * 0.05;
+    c.strokeStyle = i % 2 ? 'rgba(120,96,70,0.38)' : 'rgba(120,96,70,0.22)';
+    c.lineWidth = i % 2 ? 9 : 7;
+    for (let row = 0; row < 5; row++) {
+      const v0 = 0.18 + shift + row * 0.13;
+      const v1 = Math.min(0.86, v0 + 0.09);
+      if (v0 > 0.84) break;
+      const a = lpt(top, end, v0);
+      const b = lpt(top, end, v1);
+      if (Math.hypot(b.x - a.x, b.y - a.y) < 16) continue;
+      const mx = (a.x + b.x) / 2 + (i % 2 ? 3 : -2);
+      const my = (a.y + b.y) / 2 - 2;
+      c.beginPath();
+      c.moveTo(a.x, a.y);
+      c.quadraticCurveTo(mx, my, b.x, b.y);
+      c.stroke();
     }
-    c.stroke();
   }
+  c.restore();
   c.restore();
   poly(c, frontPts); ink(c, 1.8); c.stroke();
 
@@ -313,7 +331,7 @@ function roof(c, t) {
   roundCap(c, spine[0], tipAng, 22);
   const rang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
   const ux = Math.cos(rang), uy = Math.sin(rang);
-  const show = t < 8.35 ? 1 : t < 9.15 ? 1 - ease(t, 8.35, 9.15) : t < 22.4 ? 0 : ease(t, 22.4, 23.1);
+  const show = ornamentShow(t);
   const intoMouth = 22;
   const mouthL = { x: ridgeL.x - ux * intoMouth, y: ridgeL.y - uy * intoMouth };
   const mouthR = { x: ridgeR.x + ux * intoMouth, y: ridgeR.y + uy * intoMouth };
@@ -399,8 +417,9 @@ function ornamentAlpha(cam, bite, dir, ang) {
   }
   const mx = Math.min(minx, 1920 - maxx);
   const my = Math.min(miny, 1080 - maxy);
-  const ax = mx >= 78 ? 1 : mx <= 36 ? 0 : (mx - 36) / 42;
-  const ay = my >= 46 ? 1 : my <= 22 ? 0 : (my - 22) / 24;
+  if (mx < -24 || my < -24) return 0;
+  const ax = mx >= 72 ? 1 : Math.max(0, (mx + 24) / 96);
+  const ay = my >= 40 ? 1 : Math.max(0, (my + 24) / 64);
   return Math.min(ax, ay);
 }
 
@@ -496,62 +515,82 @@ function labels(c, cam, t, act) {
 }
 
 function card(c, t) {
-  const a = fade(t, 21.70, 22.05, 26.20, 26.60);
-  if (a < 0.02) return;
-  const x = 56, y = 48, w = 760, h = 340;
+  const a = fade(t, 21.78, 22.16, 25.85, 26.30);
+  if (a < 0.02) return a;
+  const x = 940, y = 72, w = 920, h = 820;
   c.save();
   c.globalAlpha = a;
-  c.fillStyle = 'rgba(247,244,238,0.94)';
+  c.fillStyle = 'rgba(247,244,238,0.95)';
   c.fillRect(x, y, w, h);
-  ink(c, 1.6); c.strokeRect(x, y, w, h);
-  const x0 = x + 48, y0 = y + 210;
-  const slope = ease(t, 21.88, 22.22);
-  ink(c, 2.2);
+  ink(c, 1.8); c.strokeRect(x, y, w, h);
+  const x0 = x + 56, y0 = y + 560;
+  const slope = ease(t, 21.90, 22.28);
+  ink(c, 4);
   c.beginPath();
   c.moveTo(x0, y0);
-  c.lineTo(x0 + 280 * slope, y0 - 92 * slope);
+  c.lineTo(x0 + 520 * slope, y0 - 190 * slope);
   c.stroke();
   c.fillStyle = RIDGE;
   for (let i = 0; i < 5; i++) {
-    const ta = ease(t, 22.05 + i * 0.11, 22.38 + i * 0.11);
+    const ta = ease(t, 22.05 + i * 0.08, 22.40 + i * 0.08);
     if (ta < 0.02) continue;
-    const px = x0 + 36 + i * 48, py = y0 - 12 - i * 16;
-    const lift = i === 3 ? 10 * ease(t, 22.55, 22.95) : 0;
+    const slide = (1 - ta) * 13;
+    const px = x0 + 80 + i * 100 + slide, py = y0 - 28 - i * 36 - slide * 0.35;
     c.save();
     c.globalAlpha *= ta;
     c.beginPath();
-    c.moveTo(px - 22, py - lift);
-    c.lineTo(px + 22, py - 8 - lift);
-    c.lineTo(px + 16, py - 22 - lift);
-    c.lineTo(px - 28, py - 14 - lift);
+    c.moveTo(px - 62, py);
+    c.lineTo(px + 54, py - 20);
+    c.lineTo(px + 36, py - 64);
+    c.lineTo(px - 78, py - 40);
     c.closePath();
-    c.fill(); ink(c, 1.3); c.stroke();
+    c.fill(); ink(c, 1.6); c.stroke();
     c.restore();
   }
-  const nail = ease(t, 22.62, 23.12);
+  const nail = ease(t, 22.55, 23.15);
   if (nail > 0.02) {
-    const x1 = x0 + 168, y1 = y0 - 18;
-    const x2 = x0 + 152, y2 = y0 - 96;
-    c.strokeStyle = '#241E18'; c.lineWidth = 5; c.lineCap = 'round';
+    const x1 = x0 + 310, y1 = y0 - 20;
+    const x2 = x0 + 262, y2 = y0 - 210;
+    c.strokeStyle = '#241E18'; c.lineWidth = 8; c.lineCap = 'round';
     c.beginPath();
     c.moveTo(x1, y1);
     c.lineTo(x1 + (x2 - x1) * nail, y1 + (y2 - y1) * nail);
     c.stroke();
-    if (nail > 0.72) {
-      const head = ease(t, 22.98, 23.28);
+    if (nail > 0.66) {
+      const head = ease(t, 23.00, 23.32);
+      c.save();
       c.globalAlpha *= head;
-      c.lineWidth = 7;
+      c.lineWidth = 12;
       c.beginPath();
-      c.moveTo(x2 - 16, y2);
-      c.lineTo(x2 + 20, y2 - 10);
+      c.moveTo(x2 - 28, y2 + 4);
+      c.lineTo(x2 + 34, y2 - 16);
       c.stroke();
+      c.restore();
     }
   }
   c.restore();
-  const ta = fade(t, 22.72, 23.08, 26.20, 26.60);
-  TY.text(c, '压住脊瓦', x + 360, y + 118, { size: 52, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: ta });
-  TY.text(c, '钉在瓦下', x + 360, y + 186, { size: 48, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: ta });
-  TY.text(c, '旧法示意，不是现状', x + 360, y + 250, { size: 40, fam: 'LXGWWenKai-500', color: '#5C5348', align: 'left', base: 'alphabetic', alpha: ta });
+  const la = fade(t, 22.20, 22.55, 25.85, 26.30);
+  const pa = fade(t, 22.70, 23.10, 25.85, 26.30);
+  TY.text(c, '脊瓦', x + 620, y + 250, { size: 74, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: la });
+  TY.text(c, '固定钉', x + 620, y + 430, { size: 74, fam: 'PuHui-Bold', color: '#241E18', align: 'left', base: 'alphabetic', alpha: pa });
+  TY.text(c, '固定方式示意', x + 90, y + 740, { size: 56, fam: 'LXGWWenKai-500', color: '#5C5348', align: 'left', base: 'alphabetic', alpha: la });
+  return a;
+}
+
+function hookQuestion(c, t) {
+  const a = fade(t, 0.22, 0.62, 2.05, 2.48);
+  if (a < 0.02) return;
+  const text = '屋顶上，谁在排队？';
+  const size = 76;
+  const w = TY.width(c, text, size, 'PuHui-Bold') + 48;
+  const x = 960, y = 132;
+  c.save();
+  c.globalAlpha = a * 0.94;
+  c.fillStyle = '#FBF7F0';
+  c.fillRect(x - w / 2, y - 52, w, 84);
+  ink(c, 1.3); c.strokeRect(x - w / 2, y - 52, w, 84);
+  c.restore();
+  TY.text(c, text, x, y + 6, { size, fam: 'PuHui-Bold', color: '#241E18', align: 'center', base: 'middle', alpha: a });
 }
 
 function subtitle(c, t) {
@@ -574,9 +613,9 @@ let ready = false;
 const WUJI = window.WUJI = {
   init() {
     if (ready) return; ready = true;
-    const all = SUBS.map(s => s.text).join('') + NAMES.map(n => n.name).join('') + '正吻走兽压住脊瓦钉在瓦下旧法示意不是现状';
+    const all = SUBS.map(s => s.text).join('') + NAMES.map(n => n.name).join('') + '正吻走兽屋顶上谁在排队脊瓦固定钉方式示意';
     U.assertGlyphs('76px "PuHui-Bold"', all, '样镜');
-    U.assertGlyphs('40px "LXGWWenKai-500"', '旧法示意，不是现状', '样镜卡片');
+    U.assertGlyphs('56px "LXGWWenKai-500"', '固定方式示意', '样镜卡片');
   },
   draw(c, t) {
     sky(c);
@@ -603,11 +642,13 @@ const WUJI = window.WUJI = {
       c.beginPath(); c.moveTo(x, y); c.lineTo(x + 11, y - 3); c.lineTo(x, y + 1); c.lineTo(x + 11, y + 4); c.stroke();
     }
     c.restore();
+    const roofDim = fade(t, 21.78, 22.16, 25.85, 26.30);
     c.save();
     CAM.apply(c, cam);
+    c.globalAlpha *= 1 - 0.24 * roofDim;
     roof.cam = cam;
     roof(c, t);
-    const showOrnament = t < 8.35 ? 1 : t < 9.15 ? 1 - ease(t, 8.35, 9.15) : t < 22.4 ? 0 : ease(t, 22.4, 23.1);
+    const showOrnament = ornamentShow(t);
     const aL = ornamentAlpha(cam, ridgeL, 1, ang) * showOrnament;
     const aR = ornamentAlpha(cam, ridgeR, -1, ang) * showOrnament;
     mountBase(c, ridgeL, ang, 1, aL);
@@ -636,6 +677,7 @@ const WUJI = window.WUJI = {
     c.restore();
     labels(c, near, t, act);
     card(c, t);
+    hookQuestion(c, t);
     subtitle(c, t);
   },
 };
