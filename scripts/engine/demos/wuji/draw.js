@@ -16,7 +16,7 @@ const FIG = 186;
 const ASSET = 'demos/wuji/assets/';
 const ZW = ASSET + 'zhengwen-transparent.png';
 const ZBITE = { x: 752, y: 608 };
-const ZW_H = 340;
+const ZW_H = 280;
 
 const BEASTS = [
   { id: 'xianren', name: '仙人', cx: 359.5, foot: 1350, srcH: 1191 },
@@ -33,15 +33,15 @@ const BEASTS = [
 ];
 window.EXTRA_ASSETS = BEASTS.map(b => ASSET + b.id + '-unified-transparent.png').concat(ZW);
 
-const H0 = { x: 240, y: 1080 };
-const H1 = { x: 680, y: 840 };
-const H2 = { x: 1140, y: 600 };
-const ridgeL = { x: 1580, y: 500 };
-const ridgeR = { x: 1760, y: 455 };
-const eaveR = { x: 1900, y: 880 };
-const eaveMid = { x: 1180, y: 1240 };
-const sideBack = { x: 1040, y: 280 };
-const sideEave = { x: 460, y: 620 };
+const H0 = { x: 400, y: 1000 };
+const H1 = { x: 740, y: 820 };
+const H2 = { x: 1060, y: 660 };
+const ridgeL = { x: 1280, y: 560 };
+const ridgeR = { x: 1460, y: 530 };
+const eaveR = { x: 1680, y: 860 };
+const eaveMid = { x: 1080, y: 1120 };
+const sideBack = { x: 960, y: 360 };
+const sideEave = { x: 560, y: 640 };
 
 const SUBS = [
   { t0: 0.10, t1: 2.55, text: '屋顶上，为什么排着一队神兽？' },
@@ -57,6 +57,7 @@ const SUBS = [
 ];
 
 const NAMES = [
+  { i: 0, name: '仙人', t0: 0.85, t1: 2.70 },
   { i: 0, name: '仙人', t0: 11.55, t1: 14.20 },
   { i: 1, name: '龙', t0: 15.25, t1: 15.90 },
   { i: 2, name: '凤', t0: 15.88, t1: 16.46 },
@@ -112,23 +113,22 @@ function walk(pts, step, fn) {
 
 function camAt(t) {
   const keys = [
-    { t: 0.00, u: 0.10, z: 1.58, oy: -8 },
-    { t: 2.40, u: 0.30, z: 1.72, oy: -4 },
-    { t: 4.45, ax: 1088, ay: 760, z: 0.98 },
-    { t: 8.70, ax: 1088, ay: 760, z: 0.98 },
-    { t: 12.15, u: 0.05, z: 1.68, oy: -6 },
-    { t: 15.30, u: 0.16, z: 1.56, oy: -8, ease: 'linear' },
-    { t: 21.20, u: 0.94, z: 1.56, oy: -8 },
-    { t: 23.60, ax: 1088, ay: 780, z: 0.98 },
-    { t: 27.00, ax: 1088, ay: 780, z: 0.98 },
+    { t: 0.00, ax: 860, ay: 820, z: 1.38 },
+    { t: 2.60, ax: 980, ay: 760, z: 1.48 },
+    { t: 4.70, ax: 980, ay: 760, z: 1.18 },
+    { t: 8.15, ax: 980, ay: 760, z: 1.18 },
+    { t: 11.90, u: 0.10, z: 1.58, ox: -40, oy: 50 },
+    { t: 14.20, u: 0.14, z: 1.52, ox: 0, oy: 16 },
+    { t: 21.50, u: 0.90, z: 1.52, ox: 0, oy: 8 },
+    { t: 24.10, ax: 980, ay: 780, z: 1.18 },
+    { t: 27.00, ax: 980, ay: 780, z: 1.18 },
   ];
   let i = 0;
   while (i < keys.length - 2 && t >= keys[i + 1].t) i++;
   const a = keys[i], b = keys[i + 1];
-  const p = MO.seg(t, a.t, b.t);
-  const e = a.ease === 'linear' ? p : MO.smooth(p);
-  const pa = a.ax != null ? { x: a.ax, y: a.ay } : { x: hip(a.u).x, y: hip(a.u).y + a.oy };
-  const pb = b.ax != null ? { x: b.ax, y: b.ay } : { x: hip(b.u).x, y: hip(b.u).y + b.oy };
+  const e = MO.smooth(MO.seg(t, a.t, b.t));
+  const focus = (k) => k.ax != null ? { x: k.ax, y: k.ay } : { x: hip(k.u).x + (k.ox || 0), y: hip(k.u).y + (k.oy || 0) };
+  const pa = focus(a), pb = focus(b);
   return { x: lerp(pa.x, pb.x, e), y: lerp(pa.y, pb.y, e), z: CAM.zlerp(a.z, b.z, e) };
 }
 
@@ -152,49 +152,44 @@ function roof(c) {
   const spine = hipPts.concat(up);
   const ev = sample(eave, 20);
 
-  poly(c, [sideBack, ...spine.slice().reverse(), sideEave]);
+  const rh = sample(u => quad({ x: ridgeR.x + 10, y: ridgeR.y + 16 }, { x: (ridgeR.x + eaveR.x) / 2 + 28, y: (ridgeR.y + eaveR.y) / 2 }, eaveR, u), 10);
+  const sidePts = [sideBack, ...spine.slice().reverse(), sideEave];
+  const frontPts = [...spine, { x: ridgeL.x + 14, y: ridgeL.y + 16 }, { x: ridgeR.x + 12, y: ridgeR.y + 14 }, ...rh.slice().reverse(), ...ev.slice().reverse()];
+
+  poly(c, sidePts);
   c.fillStyle = SIDE; c.fill();
-  ink(c, 1.7); c.stroke();
-
-  poly(c, [...spine, { x: ridgeL.x + 16, y: ridgeL.y + 20 }, { x: ridgeR.x + 14, y: ridgeR.y + 16 }, eaveR, ...ev.slice().reverse()]);
-  c.fillStyle = FRONT; c.fill();
-  ink(c, 1.8); c.stroke();
-
-  ink(c, 1.25, INK_SOFT);
-  for (let row = 1; row <= 8; row++) {
-    const v = row / 9;
-    c.beginPath();
-    for (let k = 0; k <= 22; k++) {
-      const u = k / 22;
-      const top = lpt({ x: ridgeL.x + 28, y: ridgeL.y + 34 }, { x: ridgeR.x + 22, y: ridgeR.y + 30 }, u);
-      const p = lpt(top, eave(u), v);
-      k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
-    }
-    c.stroke();
-    c.beginPath();
-    for (let k = 0; k <= 22; k++) {
-      const u = k / 22;
-      const top = lpt({ x: ridgeL.x + 28, y: ridgeL.y + 34 }, { x: ridgeR.x + 22, y: ridgeR.y + 30 }, u);
-      const p = lpt(top, eave(u), v);
-      const ww = 14 - v * 3;
-      c.moveTo(p.x - ww, p.y);
-      c.quadraticCurveTo(p.x, p.y + 6, p.x + ww, p.y);
-    }
-    c.stroke();
-  }
+  c.save(); c.clip();
   ink(c, 1.05, INK_SOFT);
   for (let row = 1; row <= 6; row++) {
     const v = row / 7;
     c.beginPath();
     for (let k = 0; k <= 14; k++) {
       const u = k / 14;
-      const top = lpt(sideBack, ridgeL, u);
-      const bot = lpt(sideEave, H0, u);
-      const p = lpt(top, bot, v);
+      const p = lpt(lpt(sideBack, ridgeL, u), lpt(sideEave, H0, u), v);
       k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
     }
     c.stroke();
   }
+  c.restore();
+  poly(c, sidePts); ink(c, 1.7); c.stroke();
+
+  poly(c, frontPts);
+  c.fillStyle = FRONT; c.fill();
+  c.save(); c.clip();
+  ink(c, 1.2, INK_SOFT);
+  for (let row = 1; row <= 8; row++) {
+    const v = row / 9;
+    c.beginPath();
+    for (let k = 0; k <= 22; k++) {
+      const u = k / 22;
+      const top = lpt({ x: ridgeL.x + 14, y: ridgeL.y + 16 }, { x: ridgeR.x + 12, y: ridgeR.y + 14 }, u);
+      const p = lpt(top, eave(u), v);
+      k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
+    }
+    c.stroke();
+  }
+  c.restore();
+  poly(c, frontPts); ink(c, 1.8); c.stroke();
 
   const ang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
   function solidRidge(pts, half) {
@@ -230,6 +225,8 @@ function roof(c) {
   solidRidge(spine, 24);
   const nx = Math.sin(ang), ny = -Math.cos(ang);
   const beam = [ridgeL, ridgeR, { x: ridgeR.x + nx * 22, y: ridgeR.y + ny * 22 }, { x: ridgeL.x + nx * 22, y: ridgeL.y + ny * 22 }];
+  c.save();
+  poly(c, frontPts); c.clip();
   poly(c, beam);
   c.fillStyle = RIDGE_F; c.fill();
   ink(c, 1.7); c.stroke();
@@ -240,17 +237,21 @@ function roof(c) {
     c.lineTo(p.x + nx * 22, p.y + ny * 22);
     c.stroke();
   });
+  c.restore();
 
-  ink(c, 5, CELADON);
+  ink(c, 2.2, INK);
   c.beginPath();
-  ev.forEach((p, i) => i ? c.lineTo(p.x, p.y + 4) : c.moveTo(p.x, p.y + 4));
+  ev.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
   c.stroke();
-  for (let k = 0; k <= 16; k++) {
-    const p = eave(k / 16);
-    c.beginPath();
-    c.arc(p.x, p.y + 12, 7, Math.PI * 1.08, Math.PI * 1.92);
-    c.fillStyle = CELADON; c.fill();
-    ink(c, 1.1); c.stroke();
+  if (roof.cam) {
+    walk(ev, 46, (p) => {
+      const [sx, sy] = CAM.toScreen(roof.cam, p.x, p.y + 5);
+      if (sx < 48 || sx > 1872 || sy < 48 || sy > 1032) return;
+      c.beginPath();
+      c.arc(p.x, p.y + 5, 6.5, 0, Math.PI * 2);
+      c.fillStyle = CELADON; c.fill();
+      ink(c, 1.2); c.stroke();
+    });
   }
 }
 
@@ -258,7 +259,7 @@ function ornamentAlpha(cam, bite, dir, ang) {
   const im = window.IMG[ZW];
   if (!im) return 0;
   const s = ZW_H / im.height;
-  const corners = [[80, 62], [780, 62], [80, 1056], [780, 1056]];
+  const corners = [[88, 70], [772, 70], [88, 1048], [772, 1048]];
   let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
   for (const [ix, iy] of corners) {
     const lx = (ix - ZBITE.x) * s * dir;
@@ -269,11 +270,10 @@ function ornamentAlpha(cam, bite, dir, ang) {
     minx = Math.min(minx, sx); maxx = Math.max(maxx, sx);
     miny = Math.min(miny, sy); maxy = Math.max(maxy, sy);
   }
-  if (maxx < 0 || minx > 1920 || maxy < 0 || miny > 1080) return 0;
-  if (minx < 0 || maxx > 1920 || miny < 0 || maxy > 1080) return 0;
-  const inset = Math.min(minx - 77, 1843 - maxx, miny - 43, 1037 - maxy);
-  if (inset >= 0) return 1;
-  return clamp(1 + inset / 77, 0, 1);
+  const edge = Math.min(minx, 1920 - maxx, miny, 1080 - maxy);
+  if (edge >= 90) return 1;
+  if (edge <= 48) return 0;
+  return (edge - 48) / 42;
 }
 
 function zhengwen(c, x, y, dir, ang, alpha) {
@@ -298,10 +298,17 @@ function drawBeast(c, b, x, y) {
 
 function activeName(t) {
   for (const n of NAMES) {
-    const a = fade(t, n.t0, n.t0 + 0.18, n.t1 - 0.16, n.t1);
+    const a = fade(t, n.t0, n.t0 + 0.35, n.t1 - 0.35, n.t1);
     if (a > 0.04) return { ...n, a };
   }
   return null;
+}
+
+function presence(i, t) {
+  const hook = ease(t, 0.20 + i * 0.16, 0.62 + i * 0.16);
+  const along = ease(t, 14.3 + i * 0.5, 14.85 + i * 0.5);
+  const p = t < 13.8 ? hook : Math.max(hook, along);
+  return 0.72 + 0.28 * p;
 }
 
 function beasts(c, t) {
@@ -321,7 +328,7 @@ function beasts(c, t) {
       c.restore();
     }
     c.save();
-    c.globalAlpha = act ? (on ? 1 : 0.84) : 1;
+    c.globalAlpha = on ? 1 : presence(it.i, t);
     drawBeast(c, it.b, it.p.x, it.p.y);
     c.restore();
   }
@@ -354,7 +361,7 @@ function labels(c, cam, t, act) {
 }
 
 function card(c, t) {
-  const a = fade(t, 22.05, 22.55, 26.45, 27.0);
+  const a = fade(t, 21.70, 22.10, 26.20, 26.60);
   if (a < 0.02) return;
   const x = 56, y = 48, w = 760, h = 340;
   c.save();
@@ -386,7 +393,7 @@ function card(c, t) {
 function subtitle(c, t) {
   const line = SUBS.find(s => t >= s.t0 && t < s.t1);
   if (!line) return;
-  const a = Math.min(1, (t - line.t0) / 0.12, (line.t1 - t) / 0.16);
+  const a = Math.min(1, (t - line.t0) / 0.28, (line.t1 - t) / 0.28);
   const size = line.text.length > 16 ? 68 : 76;
   const w = TY.width(c, line.text, size, 'PuHui-Bold') + 56;
   const x = 960, y = 1000;
@@ -411,14 +418,39 @@ const WUJI = window.WUJI = {
     sky(c);
     const cam = camAt(t);
     const ang = Math.atan2(ridgeR.y - ridgeL.y, ridgeR.x - ridgeL.x);
+    const ax = 980, ay = 760;
+    const far = { x: ax + (cam.x - ax) * 0.4, y: ay + (cam.y - ay) * 0.4, z: cam.z };
+    const near = { x: cam.x + (cam.x - ax) * 0.018, y: cam.y + (cam.y - ay) * 0.018, z: cam.z };
+    c.save();
+    CAM.apply(c, far);
+    c.globalAlpha = 0.28;
+    c.fillStyle = '#F7FBFA';
+    for (let i = 0; i < 5; i++) {
+      const x = 260 + i * 280 + Math.sin(t * 0.08 + i) * 28;
+      const y = 430 + (i % 2) * 50 + Math.cos(t * 0.06 + i) * 12;
+      c.beginPath(); c.ellipse(x, y, 78, 13, 0.05, 0, 7); c.fill();
+    }
+    c.globalAlpha = 0.4;
+    c.strokeStyle = '#7E9894'; c.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      const x = 180 + ((t * 16 + i * 460) % 1500);
+      const y = 390 + i * 36;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + 11, y - 3); c.lineTo(x, y + 1); c.lineTo(x + 11, y + 4); c.stroke();
+    }
+    c.restore();
     c.save();
     CAM.apply(c, cam);
+    roof.cam = cam;
     roof(c);
-    const act = beasts(c, t);
-    zhengwen(c, ridgeL.x, ridgeL.y, 1, ang, ornamentAlpha(cam, ridgeL, 1, ang));
-    zhengwen(c, ridgeR.x, ridgeR.y, -1, ang, ornamentAlpha(cam, ridgeR, -1, ang));
+    const showOrnament = t < 8.35 ? 1 : t < 9.15 ? 1 - ease(t, 8.35, 9.15) : t < 22.4 ? 0 : ease(t, 22.4, 23.1);
+    zhengwen(c, ridgeL.x, ridgeL.y, 1, ang, ornamentAlpha(cam, ridgeL, 1, ang) * showOrnament);
+    zhengwen(c, ridgeR.x, ridgeR.y, -1, ang, ornamentAlpha(cam, ridgeR, -1, ang) * showOrnament);
     c.restore();
-    labels(c, cam, t, act);
+    c.save();
+    CAM.apply(c, near);
+    const act = beasts(c, t);
+    c.restore();
+    labels(c, near, t, act);
     card(c, t);
     subtitle(c, t);
   },
